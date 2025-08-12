@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Musical Bouncing Balls - Repelling Balls</title>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #111;
+        overflow: hidden;
+        height: 100%;
+    }
+    canvas {
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+    }
+    #backgroundText {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 10vw;
+        color: rgba(255, 255, 255, 0.03);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.03);
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 0;
+        user-select: none;
+    }
+</style>
+</head>
+<body>
+<div id="backgroundText">Klassik Details</div>
+<canvas id="ballCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("ballCanvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+class Ball {
+    constructor(x, y, radius, color, dx, dy, note) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.color = color;
+        this.dx = dx;
+        this.dy = dy;
+        this.note = note;
+    }
+    draw() {
+        ctx.beginPath();
+        const gradient = ctx.createRadialGradient(this.x, this.y, this.radius/4, this.x, this.y, this.radius);
+        gradient.addColorStop(0, "white");
+        gradient.addColorStop(1, this.color);
+        ctx.fillStyle = gradient;
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    update() {
+        this.x += this.dx;
+        this.y += this.dy;
+
+        if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+            this.dx *= -1;
+            this.flash();
+            playNote(this.note);
+        }
+        if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
+            this.dy *= -1;
+            this.flash();
+            playNote(this.note);
+        }
+
+        this.draw();
+    }
+    flash() {
+        ctx.save();
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.color;
+        this.draw();
+        ctx.restore();
+    }
+}
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playNote(frequency) {
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = frequency;
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+}
+
+const collisionNotes = [
+    523.25, 587.33, 659.25, 698.46, 783.99, 880.00,
+    987.77, 1046.50, 1174.66, 1318.51, 1396.91, 1567.98
+];
+let collisionIndex = 0;
+function playCollisionSound() {
+    playNote(collisionNotes[collisionIndex]);
+    collisionIndex = (collisionIndex + 1) % collisionNotes.length;
+}
+
+function detectCollisions() {
+    for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+            let dx = balls[i].x - balls[j].x;
+            let dy = balls[i].y - balls[j].y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            let minDist = balls[i].radius + balls[j].radius;
+
+            if (distance < minDist) {
+                let angle = Math.atan2(dy, dx);
+                let overlap = (minDist - distance) / 2;
+
+                balls[i].x += Math.cos(angle) * overlap;
+                balls[i].y += Math.sin(angle) * overlap;
+                balls[j].x -= Math.cos(angle) * overlap;
+                balls[j].y -= Math.sin(angle) * overlap;
+
+                let tempDx = balls[i].dx;
+                let tempDy = balls[i].dy;
+                balls[i].dx = balls[j].dx;
+                balls[i].dy = balls[j].dy;
+                balls[j].dx = tempDx;
+                balls[j].dy = tempDy;
+
+                balls[i].flash();
+                balls[j].flash();
+                playCollisionSound();
+            }
+        }
+    }
+}
+
+const notes = [
+    261.63, 277.18, 293.66, 311.13, 329.63, 349.23,
+    369.99, 392.00, 415.30, 440.00, 466.16, 493.88
+];
+const colors = [
+    "#ff4b5c", "#ffb400", "#1dd3b0", "#4a90e2", "#d16ba5", "#f6ae2d",
+    "#9b5de5", "#00bbf9", "#00f5d4", "#f15bb5", "#fee440", "#00cecb"
+];
+
+let balls = [];
+for (let i = 0; i < 20; i++) {
+    let radius = 20 + Math.random() * 20;
+    let x = Math.random() * (canvas.width - radius * 2) + radius;
+    let y = Math.random() * (canvas.height - radius * 2) + radius;
+    let dx = (Math.random() - 0.5) * 6;
+    let dy = (Math.random() - 0.5) * 6;
+    const color = colors[i % colors.length];
+    const note = notes[i % notes.length];
+    balls.push(new Ball(x, y, radius, color, dx, dy, note));
+}
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    detectCollisions();
+    balls.forEach(ball => ball.update());
+    requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
