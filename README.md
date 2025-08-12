@@ -1,6 +1,6 @@
 # Musical Bouncing Balls - Repelling Balls
 
-<img width="1280" height="759" alt="Screenshot 2025-08-12 at 12 46 48" src="https://github.com/user-attachments/assets/5c8a0e10-b18b-4182-b114-ef341cb1297c" />
+<img width="1274" height="749" alt="Screenshot 2025-08-12 at 12 50 22" src="https://github.com/user-attachments/assets/ef7ad298-d81a-4990-9b24-aa294d018003" />
 
 ## Overview
 
