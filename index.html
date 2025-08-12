@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Musical Bouncing Balls - Repelling Balls</title>
+<title>Musical Bouncing Balls - Collision Removal</title>
 <style>
     html, body {
         margin: 0;
@@ -31,15 +31,27 @@
         z-index: 0;
         user-select: none;
     }
+    #endText {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 5vw;
+        color: white;
+        z-index: 2;
+        display: none;
+    }
 </style>
 </head>
 <body>
 <div id="backgroundText">Klassik Details</div>
+<div id="endText">End of Animation</div>
 <canvas id="ballCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById("ballCanvas");
 const ctx = canvas.getContext("2d");
+const endText = document.getElementById("endText");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -50,14 +62,13 @@ window.addEventListener("resize", () => {
 });
 
 class Ball {
-    constructor(x, y, radius, color, dx, dy, note) {
+    constructor(x, y, radius, color, dx, dy) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.color = color;
         this.dx = dx;
         this.dy = dy;
-        this.note = note;
     }
     draw() {
         ctx.beginPath();
@@ -74,23 +85,12 @@ class Ball {
 
         if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
             this.dx *= -1;
-            this.flash();
-            playNote(this.note);
         }
         if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
             this.dy *= -1;
-            this.flash();
-            playNote(this.note);
         }
 
         this.draw();
-    }
-    flash() {
-        ctx.save();
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = this.color;
-        this.draw();
-        ctx.restore();
     }
 }
 
@@ -127,53 +127,58 @@ function detectCollisions() {
             let minDist = balls[i].radius + balls[j].radius;
 
             if (distance < minDist) {
-                let angle = Math.atan2(dy, dx);
-                let overlap = (minDist - distance) / 2;
-
-                balls[i].x += Math.cos(angle) * overlap;
-                balls[i].y += Math.sin(angle) * overlap;
-                balls[j].x -= Math.cos(angle) * overlap;
-                balls[j].y -= Math.sin(angle) * overlap;
-
-                let tempDx = balls[i].dx;
-                let tempDy = balls[i].dy;
-                balls[i].dx = balls[j].dx;
-                balls[i].dy = balls[j].dy;
-                balls[j].dx = tempDx;
-                balls[j].dy = tempDy;
-
-                balls[i].flash();
-                balls[j].flash();
                 playCollisionSound();
+                let survivor, removeIndex;
+                if (balls[i].radius < balls[j].radius) {
+                    survivor = balls[j];
+                    removeIndex = i;
+                } else if (balls[j].radius < balls[i].radius) {
+                    survivor = balls[i];
+                    removeIndex = j;
+                } else {
+                    if (Math.random() < 0.5) {
+                        survivor = balls[j];
+                        removeIndex = i;
+                    } else {
+                        survivor = balls[i];
+                        removeIndex = j;
+                    }
+                }
+                // Change survivor color and slightly increase size
+                survivor.color = colors[Math.floor(Math.random() * colors.length)];
+                survivor.radius *= 1.05;
+
+                balls.splice(removeIndex, 1);
+                if (balls.length === 1) {
+                    endText.style.display = "block";
+                }
+                return;
             }
         }
     }
 }
 
-const notes = [
-    261.63, 277.18, 293.66, 311.13, 329.63, 349.23,
-    369.99, 392.00, 415.30, 440.00, 466.16, 493.88
-];
 const colors = [
     "#ff4b5c", "#ffb400", "#1dd3b0", "#4a90e2", "#d16ba5", "#f6ae2d",
     "#9b5de5", "#00bbf9", "#00f5d4", "#f15bb5", "#fee440", "#00cecb"
 ];
 
 let balls = [];
-for (let i = 0; i < 20; i++) {
-    let radius = 20 + Math.random() * 20;
+for (let i = 0; i < 100; i++) {
+    let radius = 10 + Math.random() * 20;
     let x = Math.random() * (canvas.width - radius * 2) + radius;
     let y = Math.random() * (canvas.height - radius * 2) + radius;
     let dx = (Math.random() - 0.5) * 6;
     let dy = (Math.random() - 0.5) * 6;
     const color = colors[i % colors.length];
-    const note = notes[i % notes.length];
-    balls.push(new Ball(x, y, radius, color, dx, dy, note));
+    balls.push(new Ball(x, y, radius, color, dx, dy));
 }
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    detectCollisions();
+    if (balls.length > 1) {
+        detectCollisions();
+    }
     balls.forEach(ball => ball.update());
     requestAnimationFrame(animate);
 }
