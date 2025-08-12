@@ -1,5 +1,7 @@
 # Musical Bouncing Balls - Repelling Balls
 
+<img width="1280" height="759" alt="Screenshot 2025-08-12 at 12 46 48" src="https://github.com/user-attachments/assets/5c8a0e10-b18b-4182-b114-ef341cb1297c" />
+
 ## Overview
 
 This project is an HTML5 Canvas animation featuring colorful balls that bounce around the screen, play unique musical tones when they hit walls, and produce different tones when colliding with each other. The balls repel each other upon contact, ensuring they never overlap or stick together. A soft, subtle background text reading "Klassik Details" is displayed to add a visual watermark without interfering with the animation.
